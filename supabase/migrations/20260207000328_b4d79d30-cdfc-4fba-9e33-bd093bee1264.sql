@@ -1,0 +1,1 @@
+ALTER TABLE public.chat_agent_config ADD COLUMN few_shot_examples jsonb NOT NULL DEFAULT '[]'::jsonb;

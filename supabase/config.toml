@@ -1,0 +1,22 @@
+project_id = "meapnqpnjywhyzfiwqqe"
+
+[functions.track-visit]
+verify_jwt = false
+
+[functions.generate-blog]
+verify_jwt = false
+
+[functions.chat-ai]
+verify_jwt = false
+
+[functions.manage-ai-keys]
+verify_jwt = false
+
+[functions.whatsapp-manager]
+verify_jwt = false
+
+[functions.sitemap]
+verify_jwt = false
+
+[functions.remove-bg]
+verify_jwt = false

@@ -20,14 +20,14 @@ export const useGeolocation = () => {
   useEffect(() => {
     const fetchGeo = async () => {
       try {
-        const res = await fetch('https://ip-api.com/json/?fields=city,country,countryCode');
+        const res = await fetch('https://ipwho.is/');
         if (res.ok) {
           const data = await res.json();
-          const locale = COUNTRY_TO_LOCALE[data.countryCode] || 'en';
+          const locale = COUNTRY_TO_LOCALE[data.country_code] || 'en';
           setGeoData({
             city: data.city || '',
             country: data.country || '',
-            countryCode: data.countryCode || '',
+            countryCode: data.country_code || '',
             detectedLocale: locale,
           });
         }

@@ -67,42 +67,52 @@ async function generateCoverImage(supabase: any, topic: string, imageStyle: stri
     
     if (!apiKey) throw new Error("GEMINI_API_KEY is not configured or no active Gemini provider found");
 
-    // Chamada oficial REST API para o modelo do Gemini 2.5 flash image
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        contents: {
-          parts: [{ text: stylePrompt }]
-        }
-      })
-    });
+    // Chamada REST oficial para o modelo gemini-2.5-flash-image (geração nativa de imagem)
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: stylePrompt }]
+          }]
+        })
+      }
+    );
 
     if (!response.ok) {
-        console.error("Gemini API error:", await response.text());
-        return null;
+      const errText = await response.text();
+      console.error("Gemini Image API error:", errText);
+      return null;
     }
 
     const data = await response.json();
-    let base64Data = null;
+    let base64Data: string | null = null;
+    let mimeType = "image/jpeg";
 
-    if (data.candidates?.[0]?.content?.parts) {
-      for (const part of data.candidates[0].content.parts) {
+    // A imagem vem em response.candidates[0].content.parts como inlineData
+    const parts = data?.candidates?.[0]?.content?.parts;
+    if (parts) {
+      for (const part of parts) {
         if (part.inlineData) {
           base64Data = part.inlineData.data;
+          mimeType = part.inlineData.mimeType || "image/jpeg";
           break;
         }
       }
     }
 
     if (base64Data) {
-        // Envia para o storage e retorna o link permanente, para não poluir o banco com milhões de caracteres do base64!
-        const publicUrl = await uploadImageToStorage(`data:image/png;base64,${base64Data}`, "cover-ai", "png");
-        return publicUrl;
+      const ext = mimeType.includes("png") ? "png" : "jpeg";
+      const publicUrl = await uploadImageToStorage(`data:${mimeType};base64,${base64Data}`, "cover-ai", ext as "png" | "webp");
+      return publicUrl;
     }
 
+    console.error("Nenhuma imagem foi retornada pela API do Gemini.");
     return null; 
   } catch (err) { console.error("Cover image error:", err); return null; }
 }

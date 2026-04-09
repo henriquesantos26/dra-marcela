@@ -3,6 +3,8 @@ import { Plus, Trash2, Edit2, Eye, EyeOff, Save, X, Upload, Loader2, Sparkles, C
 import { supabase } from '@/integrations/supabase/client';
 import type { BlogPost } from '@/hooks/useBlogPosts';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { AdminBlogMeta } from './blog/AdminBlogMeta';
+import TipTapEditor from './blog/TipTapEditor';
 
 const slugify = (text: string) =>
   text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -21,6 +23,8 @@ type QueueItem = { topic: TopicSuggestion; status: 'pending' | 'generating' | 'd
 
 const AdminBlogPage = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [categoriesList, setCategoriesList] = useState<any[]>([]);
+  const [authorsList, setAuthorsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<BlogPost | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -59,8 +63,14 @@ const AdminBlogPage = () => {
 
   const fetchPosts = async () => {
     setLoading(true);
-    const { data } = await supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
-    setPosts((data || []) as BlogPost[]);
+    const [postsRes, catRes, authRes] = await Promise.all([
+      supabase.from('blog_posts').select('*').order('created_at', { ascending: false }),
+      supabase.from('blog_categories').select(`*, default_author:blog_authors(*)`),
+      supabase.from('blog_authors').select('*')
+    ]);
+    if (postsRes.data) setPosts(postsRes.data as BlogPost[]);
+    if (catRes.data) setCategoriesList(catRes.data);
+    if (authRes.data) setAuthorsList(authRes.data);
     setLoading(false);
   };
 
@@ -190,6 +200,18 @@ const AdminBlogPage = () => {
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
+
+      // Auto assign author based on category
+      const targetCategoryName = data.category || editing.category;
+      let matchedAuthor = null;
+      if (targetCategoryName) {
+        const cat = categoriesList.find(c => c.name.toLowerCase() === targetCategoryName.toLowerCase());
+        if (cat?.default_author) matchedAuthor = cat.default_author;
+      }
+      if (!matchedAuthor) {
+        matchedAuthor = authorsList.find(a => a.is_primary);
+      }
+
       setAiProgress('Post gerado com sucesso!');
       setEditing({
         ...editing,
@@ -198,13 +220,14 @@ const AdminBlogPage = () => {
         excerpt: data.excerpt || editing.excerpt,
         content: data.content || editing.content,
         cover_image: data.cover_image || editing.cover_image,
-        category: data.category || editing.category,
+        category: targetCategoryName,
         tags: data.tags || editing.tags,
-        author_name: editing.author_name || '7 Zion AI',
+        author_name: matchedAuthor ? matchedAuthor.name : (data.author_name || editing.author_name),
+        author_avatar: matchedAuthor ? matchedAuthor.avatar_url : (data.author_avatar || editing.author_avatar),
+        author_bio: matchedAuthor ? matchedAuthor.bio : (data.author_bio || editing.author_bio),
         meta_title: data.meta_title || editing.meta_title,
         meta_description: data.meta_description || editing.meta_description,
       });
-      setTimeout(() => setAiProgress(''), 3000);
     } catch (err: any) {
       console.error('Generation error:', err);
       setAiError(err.message || 'Erro ao gerar o post. Tente novamente.');
@@ -511,8 +534,24 @@ const AdminBlogPage = () => {
             </div>
             <div>
               <label className="block text-xs font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">Categoria</label>
-              <input type="text" value={editing.category || ''} onChange={(e) => updateEditing('category', e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-[#5766fe]/40 text-sm" />
+              <select value={editing.category || ''} onChange={(e) => {
+                  const val = e.target.value;
+                  const cat = categoriesList.find(c => c.name === val);
+                  if (cat && cat.default_author) {
+                    updateEditingMultiple({
+                      category: val,
+                      author_name: cat.default_author.name,
+                      author_avatar: cat.default_author.avatar_url,
+                      author_bio: cat.default_author.bio
+                    });
+                  } else {
+                    updateEditing('category', val);
+                  }
+                }}
+                className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-[#5766fe]/40 text-sm">
+                <option value="">(Sem categoria)</option>
+                {categoriesList.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">Tags (separadas por vírgula)</label>
@@ -537,21 +576,39 @@ const AdminBlogPage = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">Nome do Autor</label>
-              <input type="text" value={editing.author_name || ''} onChange={(e) => updateEditing('author_name', e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-[#5766fe]/40 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">Avatar do Autor (URL)</label>
-              <input type="text" value={editing.author_avatar || ''} onChange={(e) => updateEditing('author_avatar', e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-[#5766fe]/40 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">Bio do Autor (EEAT)</label>
-              <textarea value={editing.author_bio || ''} onChange={(e) => updateEditing('author_bio', e.target.value)} rows={3}
-                placeholder="Ex: Especialista em marketing digital com 10+ anos de experiência..."
-                className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-[#5766fe]/40 resize-none text-sm" />
+            <div className="p-4 rounded-xl border border-border bg-card shadow-sm space-y-4">
+              <div>
+                <label className="block text-xs font-black text-blue-500 mb-1.5 uppercase tracking-wider">Autor do Post</label>
+                <select 
+                  value={authorsList.find(a => a.name === editing.author_name)?.id || ''}
+                  onChange={(e) => {
+                    const au = authorsList.find(a => a.id === e.target.value);
+                    if (au) {
+                      updateEditingMultiple({ author_name: au.name, author_avatar: au.avatar_url, author_bio: au.bio });
+                    }
+                  }}
+                  className="w-full px-4 py-2.5 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-sm font-bold">
+                  <option value="">(Selecione ou deixe manual)</option>
+                  {authorsList.map(a => <option key={a.id} value={a.id}>{a.name} {a.is_primary ? '(Principal)' : ''}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wider">Nome do Autor (Manual)</label>
+                  <input type="text" value={editing.author_name || ''} onChange={(e) => updateEditing('author_name', e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/40 text-xs" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wider">Avatar (URL)</label>
+                  <input type="text" value={editing.author_avatar || ''} onChange={(e) => updateEditing('author_avatar', e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/40 text-xs" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wider">Bio do Autor (EEAT)</label>
+                <textarea value={editing.author_bio || ''} onChange={(e) => updateEditing('author_bio', e.target.value)} rows={2}
+                  className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/40 resize-none text-xs" />
+              </div>
             </div>
 
             <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
@@ -590,9 +647,8 @@ const AdminBlogPage = () => {
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">Conteúdo (HTML)</label>
-          <textarea value={editing.content || ''} onChange={(e) => updateEditing('content', e.target.value)} rows={20}
-            className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-[#5766fe]/40 resize-y text-sm font-mono" />
+          <label className="block text-xs font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">Conteúdo (HTML / Rich Text)</label>
+          <TipTapEditor content={editing.content || ''} onChange={(c) => updateEditing('content', c)} />
         </div>
       </div>
     );
@@ -611,6 +667,9 @@ const AdminBlogPage = () => {
           </TabsTrigger>
           <TabsTrigger value="schedule" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm font-bold text-sm">
             <Clock className="w-3.5 h-3.5 mr-1.5" /> Agendamento
+          </TabsTrigger>
+          <TabsTrigger value="meta" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm font-bold text-sm">
+            🏷️ Categorias & Autores
           </TabsTrigger>
         </TabsList>
 
@@ -949,6 +1008,10 @@ const AdminBlogPage = () => {
               </button>
             </div>
           </div>
+        </TabsContent>
+        {/* ── Tab: Meta (Authors & Categories) ── */}
+        <TabsContent value="meta">
+          <AdminBlogMeta />
         </TabsContent>
       </Tabs>
     </div>

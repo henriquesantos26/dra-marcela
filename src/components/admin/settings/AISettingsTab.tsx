@@ -16,14 +16,12 @@ interface AIProvider {
 
 const PROVIDER_ICONS: Record<string, string> = {
   gemini: '🔷',
-  chatgpt: '🟢',
-  lovable: '💜',
+  chatgpt: '🟢'
 };
 
 const PROVIDER_DESCRIPTIONS: Record<string, string> = {
   gemini: 'Google Gemini — modelos avançados de IA generativa',
-  chatgpt: 'OpenAI ChatGPT — processamento de linguagem natural',
-  lovable: 'Lovable AI Gateway — já configurado automaticamente',
+  chatgpt: 'OpenAI ChatGPT — processamento de linguagem natural'
 };
 
 const PROVIDER_MODELS: Record<string, { id: string; label: string; desc: string }[]> = {
@@ -88,8 +86,8 @@ const AISettingsTab = () => {
   };
 
   const handleToggleActive = async (provider: AIProvider) => {
-    // Don't allow activating without a key (except lovable)
-    if (!provider.is_active && !provider.api_key_encrypted && provider.provider_name !== 'lovable') {
+    // Don't allow activating without a key
+    if (!provider.is_active && !provider.api_key_encrypted) {
       setSavedMsg('Adicione a chave de API antes de ativar.');
       setTimeout(() => setSavedMsg(''), 3000);
       return;
@@ -215,56 +213,54 @@ const AISettingsTab = () => {
               </div>
             )}
 
-            {/* API Key input (not for lovable) */}
-            {provider.provider_name !== 'lovable' && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-muted-foreground" />
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Chave de API</label>
-                  {provider.api_key_encrypted && (
-                    <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                      🔒 Criptografada
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type={showKeys[provider.provider_name] ? 'text' : 'password'}
-                      value={apiKeys[provider.provider_name] || ''}
-                      onChange={(e) => setApiKeys((prev) => ({ ...prev, [provider.provider_name]: e.target.value }))}
-                      placeholder={provider.api_key_encrypted ? '••••••••••••••••••••••••' : 'Cole sua chave de API aqui...'}
-                      className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-[#5766fe]/40 text-sm font-mono pr-10"
-                    />
-                    <button
-                      onClick={() => setShowKeys((prev) => ({ ...prev, [provider.provider_name]: !prev[provider.provider_name] }))}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showKeys[provider.provider_name] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => handleSaveKey(provider)}
-                    disabled={saving === provider.id || !apiKeys[provider.provider_name]?.trim()}
-                    className="px-5 py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50 flex items-center gap-2"
-                    style={{ background: 'linear-gradient(135deg, #5766fe, #820dd1)' }}
-                  >
-                    {saving === provider.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Salvar
-                  </button>
-                </div>
-
+            {/* API Key input */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-muted-foreground" />
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Chave de API</label>
                 {provider.api_key_encrypted && (
-                  <button
-                    onClick={() => handleRemoveKey(provider)}
-                    className="text-xs font-bold text-destructive hover:underline"
-                  >
-                    Remover chave
-                  </button>
+                  <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    🔒 Criptografada
+                  </span>
                 )}
               </div>
-            )}
+
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type={showKeys[provider.provider_name] ? 'text' : 'password'}
+                    value={apiKeys[provider.provider_name] || ''}
+                    onChange={(e) => setApiKeys((prev) => ({ ...prev, [provider.provider_name]: e.target.value }))}
+                    placeholder={provider.api_key_encrypted ? '••••••••••••••••••••••••' : 'Cole sua chave de API aqui...'}
+                    className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-[#5766fe]/40 text-sm font-mono pr-10"
+                  />
+                  <button
+                    onClick={() => setShowKeys((prev) => ({ ...prev, [provider.provider_name]: !prev[provider.provider_name] }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showKeys[provider.provider_name] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <button
+                  onClick={() => handleSaveKey(provider)}
+                  disabled={saving === provider.id || !apiKeys[provider.provider_name]?.trim()}
+                  className="px-5 py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50 flex items-center gap-2"
+                  style={{ background: 'linear-gradient(135deg, #5766fe, #820dd1)' }}
+                >
+                  {saving === provider.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Salvar
+                </button>
+              </div>
+
+              {provider.api_key_encrypted && (
+                <button
+                  onClick={() => handleRemoveKey(provider)}
+                  className="text-xs font-bold text-destructive hover:underline"
+                >
+                  Remover chave
+                </button>
+              )}
+            </div>
 
             {/* Priority selection */}
             {provider.is_active && (

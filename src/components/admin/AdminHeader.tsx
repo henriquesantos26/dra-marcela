@@ -1,5 +1,5 @@
 import React from 'react';
-import { Save, Sun, Moon } from 'lucide-react';
+import { Save, Sun, Moon, Menu } from 'lucide-react';
 
 interface AdminHeaderProps {
   sectionLabel: string;
@@ -9,16 +9,27 @@ interface AdminHeaderProps {
   hideSave?: boolean;
   darkMode?: boolean;
   onToggleTheme?: () => void;
+  onMenuClick?: () => void;
 }
 
-const AdminHeader = ({ sectionLabel, saving, saved, onSave, hideSave, darkMode, onToggleTheme }: AdminHeaderProps) => {
+const AdminHeader = ({ sectionLabel, saving, saved, onSave, hideSave, darkMode, onToggleTheme, onMenuClick }: AdminHeaderProps) => {
   const gradient = 'linear-gradient(135deg, #5766fe, #820dd1)';
 
   return (
-    <header className="sticky top-0 z-40 h-16 flex items-center justify-between px-8 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-      <div>
-        <h2 className="text-lg font-black text-foreground tracking-tight">{sectionLabel}</h2>
-        <p className="text-xs text-muted-foreground font-medium">Layout do Site</p>
+    <header className="sticky top-0 z-40 h-16 flex items-center justify-between px-4 md:px-8 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+      <div className="flex items-center gap-3">
+        {onMenuClick && (
+          <button
+            onClick={onMenuClick}
+            className="md:hidden p-1.5 -ml-1 text-muted-foreground hover:text-foreground"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+        <div>
+          <h2 className="text-lg font-black text-foreground tracking-tight">{sectionLabel}</h2>
+          <p className="text-xs text-muted-foreground font-medium hidden sm:block">Layout do Site</p>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">

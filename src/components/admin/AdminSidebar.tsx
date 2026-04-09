@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   LayoutDashboard, Activity, FileText,
-  LogOut, ChevronLeft, ChevronRight, MessageCircle, Settings, Columns3, Users, PenTool, Code, Bot,
+  LogOut, ChevronLeft, ChevronRight, MessageCircle, Settings, Columns3, Users, PenTool, Code, Bot, UserCog
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,32 +12,40 @@ interface AdminSidebarProps {
   onPageChange: (page: string) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  mobileOpen?: boolean;
+  setMobileOpen?: (v: boolean) => void;
 }
 
 const MENU_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  
   { id: 'blog', label: 'Blog', icon: FileText },
   { id: 'chat', label: 'Chat', icon: MessageCircle },
   { id: 'agent', label: 'Agente IA', icon: Bot },
   { id: 'kanban', label: 'Kanban', icon: Columns3 },
   { id: 'clients', label: 'Clientes', icon: Users },
   { id: 'tracking', label: 'Rastreamento', icon: Code },
-  { id: 'settings', label: 'Configurações', icon: Settings },
   { id: 'metrics', label: 'Métricas', icon: Activity },
+  { id: 'users', label: 'Usuários', icon: UserCog },
+  { id: 'settings', label: 'Configurações', icon: Settings },
 ];
 
-const AdminSidebar = ({ activePage, onPageChange, collapsed, onToggleCollapse }: AdminSidebarProps) => {
+const AdminSidebar = ({ activePage, onPageChange, collapsed, onToggleCollapse, mobileOpen, setMobileOpen }: AdminSidebarProps) => {
   const navigate = useNavigate();
-  const { signOut, user } = useAuth();
+  const { signOut, user, userRole, allowedPages } = useAuth();
   const { content } = useSiteContent();
   const gradient = 'linear-gradient(135deg, #5766fe, #820dd1)';
+
+  const filteredMenuItems = MENU_ITEMS.filter(item => {
+    if (userRole === 'admin') return true;
+    if (['users', 'settings', 'agent'].includes(item.id)) return false;
+    return allowedPages.includes('*') || allowedPages.includes(item.id);
+  });
 
   return (
     <aside
       className={`fixed left-0 top-0 h-screen z-50 flex flex-col transition-all duration-300 border-r border-foreground/5 ${
         collapsed ? 'w-[72px]' : 'w-[260px]'
-      }`}
+      } ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
       style={{ background: 'linear-gradient(180deg, hsl(240 20% 6%), hsl(240 15% 4%))' }}
     >
       {/* Logo */}
@@ -54,7 +62,7 @@ const AdminSidebar = ({ activePage, onPageChange, collapsed, onToggleCollapse }:
         {!collapsed && (
           <p className="text-[10px] font-black text-white/25 uppercase tracking-[0.2em] px-2 mb-3">Menu</p>
         )}
-        {MENU_ITEMS.map((item) => {
+        {filteredMenuItems.map((item) => {
           const isActive = activePage === item.id;
           return (
             <button
@@ -79,17 +87,18 @@ const AdminSidebar = ({ activePage, onPageChange, collapsed, onToggleCollapse }:
 
       {/* Bottom section */}
       <div className="border-t border-foreground/5 p-3 space-y-1">
-        {/* Editar Site Visualmente */}
-        <button
-          onClick={() => navigate('/?edit=true')}
-          title={collapsed ? 'Editar Site' : undefined}
-          className={`w-full flex items-center gap-3 rounded-xl text-sm font-semibold transition-all ${
-            collapsed ? 'justify-center px-0 py-3' : 'px-4 py-3'
-          } text-emerald-400 hover:bg-emerald-500/10`}
-        >
-          <PenTool className="w-[18px] h-[18px] flex-shrink-0" />
-          {!collapsed && <span>Editar Site</span>}
-        </button>
+        {userRole === 'admin' && (
+          <button
+            onClick={() => navigate('/?edit=true')}
+            title={collapsed ? 'Editar Site' : undefined}
+            className={`w-full flex items-center gap-3 rounded-xl text-sm font-semibold transition-all ${
+              collapsed ? 'justify-center px-0 py-3' : 'px-4 py-3'
+            } text-emerald-400 hover:bg-emerald-500/10`}
+          >
+            <PenTool className="w-[18px] h-[18px] flex-shrink-0" />
+            {!collapsed && <span>Editar Site</span>}
+          </button>
+        )}
 
         <button
           onClick={() => navigate('/')}
@@ -116,7 +125,7 @@ const AdminSidebar = ({ activePage, onPageChange, collapsed, onToggleCollapse }:
         {!collapsed && user && (
           <div className="px-4 py-3 mt-2 rounded-xl bg-white/5">
             <p className="text-xs font-bold text-white/60 truncate">{user.email}</p>
-            <p className="text-[10px] text-white/30 font-semibold mt-0.5">Administrador</p>
+            <p className="text-[10px] text-white/30 font-semibold mt-0.5 capitalize">{userRole === 'admin' ? 'Administrador' : 'Usuário (Editor)'}</p>
           </div>
         )}
       </div>
@@ -124,7 +133,7 @@ const AdminSidebar = ({ activePage, onPageChange, collapsed, onToggleCollapse }:
       {/* Collapse toggle */}
       <button
         onClick={onToggleCollapse}
-        className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white/10 border border-foreground/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/20 transition-all"
+        className="hidden md:flex absolute -right-3 top-20 w-6 h-6 rounded-full bg-white/10 border border-foreground/10 items-center justify-center text-white/50 hover:text-white hover:bg-white/20 transition-all"
       >
         {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
       </button>

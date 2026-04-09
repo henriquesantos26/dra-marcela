@@ -3,9 +3,10 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 const ProtectedAdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, userRole } = useAuth();
 
-  if (loading) {
+  // If loading or we don't know the role yet (isAdmin is null and user is defined)
+  if (loading || (user && userRole === null)) {
     return (
       <div className="min-h-screen bg-rocket-dark flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -17,7 +18,8 @@ const ProtectedAdminRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/acessar" replace />;
   }
 
-  if (!isAdmin) {
+  // Se userRole for 'none' ou null aqui, não tem acesso
+  if (userRole === 'none' || !userRole) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="text-center max-w-md">

@@ -6,7 +6,9 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  isAdmin: boolean;
+  isAdmin: boolean | null;
+  userRole: string | null;
+  allowedPages: string[];
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -16,7 +18,9 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   loading: true,
-  isAdmin: false,
+  isAdmin: null,
+  userRole: null,
+  allowedPages: [],
   signUp: async () => ({ error: null }),
   signIn: async () => ({ error: null }),
   signOut: async () => {},
@@ -28,43 +32,77 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [allowedPages, setAllowedPages] = useState<string[]>([]);
 
-  const checkAdminRole = async (userId: string) => {
-    const { data } = await supabase.rpc('has_role', {
-      _user_id: userId,
-      _role: 'admin',
-    });
-    setIsAdmin(!!data);
+  const fetchAccessInfo = async (userId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('get_user_info', {
+        _user_id: userId,
+      });
+
+      if (error) {
+        console.error('Error fetching role:', error);
+        return { role: 'none', allowed_pages: [] };
+      }
+      
+      const role = data?.role || 'none';
+      const allowed_pages = data?.allowed_pages || [];
+
+      return { role, allowed_pages };
+    } catch (err) {
+      console.error('Access info exception:', err);
+      return { role: 'none', allowed_pages: [] };
+    }
   };
 
   useEffect(() => {
     let isMounted = true;
 
-    // Listener for ONGOING auth changes (does NOT control loading)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!isMounted) return;
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        checkAdminRole(session.user.id);
-      } else {
-        setIsAdmin(false);
+    const handleAuthStateUpdate = async (session: Session | null) => {
+      const currentUser = session?.user ?? null;
+      if (isMounted) {
+        setSession(session);
+        setUser(currentUser);
       }
+
+      if (currentUser) {
+        if (isMounted) setIsAdmin(null);
+        const accessInfo = await fetchAccessInfo(currentUser.id);
+        if (isMounted) {
+          const isUserAdmin = accessInfo.role === 'admin';
+          setIsAdmin(isUserAdmin);
+          setUserRole(accessInfo.role);
+          setAllowedPages(isUserAdmin ? ['*'] : accessInfo.allowed_pages);
+          setLoading(false);
+        }
+      } else {
+        if (isMounted) {
+          setIsAdmin(false);
+          setUserRole('none');
+          setAllowedPages([]);
+          setLoading(false);
+        }
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted) return;
+      handleAuthStateUpdate(session);
     });
 
-    // INITIAL load - wait for role check before setting loading=false
     const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!isMounted) return;
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await checkAdminRole(session.user.id);
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        handleAuthStateUpdate(session);
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (isMounted) {
+          setIsAdmin(false);
+          setLoading(false);
         }
-      } finally {
-        if (isMounted) setLoading(false);
       }
     };
 
@@ -100,7 +138,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, userRole, allowedPages, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

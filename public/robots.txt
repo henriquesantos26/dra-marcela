@@ -15,4 +15,4 @@ Allow: /
 Disallow: /admin
 Disallow: /acessar
 
-Sitemap: https://meapnqpnjywhyzfiwqqe.supabase.co/functions/v1/sitemap
+Sitemap: https://nmqisqezjunhoofghbze.supabase.co/functions/v1/sitemap

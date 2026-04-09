@@ -15,8 +15,18 @@ export default {
     extend: {
       fontFamily: {
         outfit: ['Outfit', 'sans-serif'],
+        montserrat: ['Montserrat', 'sans-serif'],
       },
       colors: {
+        marcela: {
+          hero: "var(--marcela-green-hero)",
+          dark: "var(--marcela-green-dark)",
+          accent: "var(--marcela-green-accent)",
+          olive: "var(--marcela-green-olive)",
+          bento: "var(--marcela-green-bento)",
+          button: "var(--marcela-green-button)",
+          grey: "var(--marcela-text-grey)",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

@@ -88,6 +88,53 @@ export interface SiteContent {
     badgeColor: string;
     blogCtaBackground: string;
   };
+  marcela?: {
+    hero: {
+      badge: string;
+      title: string;
+      subtitle1: string;
+      subtitle2: string;
+      subtitle3: string;
+      ctaText1: string;
+      ctaText2: string;
+    };
+    about: {
+      title: string;
+      name: string;
+      text1: string;
+      text2: string;
+      ctaText: string;
+    };
+    purpose: {
+      title: string;
+      text: string;
+    };
+    services: {
+      title: string;
+      subtitle: string;
+      ctaText: string;
+      items: { title: string }[];
+    };
+    testimonials: {
+      title: string;
+      items: { name: string; text: string }[];
+    };
+    stats: {
+      item1: { value: number; label: string };
+      item2: { value: number; label: string };
+      item3: { value: number; label: string };
+    };
+    contact: {
+      title: string;
+      subtitle: string;
+      text1: string;
+      address: string;
+      ctaText: string;
+      mapUrl: string;
+    };
+    blogTitle: string;
+    blogSubtitle: string;
+  };
   customStyles?: Record<string, { color?: string; fontSize?: string; fontFamily?: string; fontWeight?: string; textAlign?: string; letterSpacing?: string }>;
   sectionStyles?: Record<string, { backgroundType?: string; backgroundColor?: string; gradientFrom?: string; gradientTo?: string; gradientAngle?: number; backgroundImage?: string; backgroundOverlayOpacity?: number; paddingY?: string }>;
 }

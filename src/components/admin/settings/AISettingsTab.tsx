@@ -55,14 +55,14 @@ const AISettingsTab = () => {
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [savedMsg, setSavedMsg] = useState('');
 
-  const fetchProviders = async () => {
-    setLoading(true);
+  const fetchProviders = async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     const { data } = await supabase.from('ai_providers').select('*').order('created_at');
     setProviders((data || []) as AIProvider[]);
     setLoading(false);
   };
 
-  useEffect(() => { fetchProviders(); }, []);
+  useEffect(() => { fetchProviders(true); }, []);
 
   const handleSaveKey = async (provider: AIProvider) => {
     const key = apiKeys[provider.provider_name];
@@ -77,9 +77,11 @@ const AISettingsTab = () => {
       setApiKeys((prev) => ({ ...prev, [provider.provider_name]: '' }));
       fetchProviders();
       setTimeout(() => setSavedMsg(''), 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving key:', err);
-      setSavedMsg('Erro ao salvar a chave.');
+      // Try to extract error message from the response if available
+      const errorMsg = err.context?.error || err.message || 'Erro ao salvar a chave.';
+      setSavedMsg(`Erro: ${errorMsg}`);
     } finally {
       setSaving(null);
     }

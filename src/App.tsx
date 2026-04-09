@@ -11,6 +11,9 @@ import AdminPage from "./pages/AdminPage";
 import AuthPage from "./pages/AuthPage";
 import BlogPage from "./pages/BlogPage";
 import BlogPostPage from "./pages/BlogPostPage";
+import MarcelaHome from "./pages/marcela/Home";
+import MarcelaBlog from "./pages/marcela/Blog";
+import MarcelaBlogPost from "./pages/marcela/BlogPost";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import NotFound from "./pages/NotFound";
 import ChatWidget from "./components/ChatWidget";
@@ -28,9 +31,12 @@ const App = () => (
           <SiteContentProvider>
             <BrowserRouter>
               <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/blog" element={<BlogPage />} />
-                <Route path="/blog/:slug" element={<BlogPostPage />} />
+                <Route path="/" element={<MarcelaHome />} />
+                <Route path="/original" element={<Index />} />
+                <Route path="/blog" element={<MarcelaBlog />} />
+                <Route path="/blog/:id" element={<MarcelaBlogPost />} />
+                <Route path="/original-blog" element={<BlogPage />} />
+                <Route path="/original-blog/:slug" element={<BlogPostPage />} />
                 <Route path="/acessar" element={<AuthPage />} />
                 <Route path="/admin" element={
                   <ProtectedAdminRoute>

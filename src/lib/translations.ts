@@ -144,6 +144,8 @@ export const translations: Record<Locale, SiteContent> = {
       linkColor: "#5766fe",
       badgeColor: "#5766fe",
       blogCtaBackground: "#5766fe",
+      siteName: "Dra. Marcela Bernardi | Ginecologia e Obstetrícia",
+      description: "Especialista em Saúde da Mulher, Ginecologia e Obstetrícia Humanizada.",
     },
     marcela: {
       hero: {
@@ -326,6 +328,8 @@ export const translations: Record<Locale, SiteContent> = {
       linkColor: "#5766fe",
       badgeColor: "#5766fe",
       blogCtaBackground: "#5766fe",
+      siteName: "Dr. Marcela Bernardi | Gynecology and Obstetrics",
+      description: "Specialist in Women's Health, Gynecology and Humanized Obstetrics.",
     },
   },
   fr: {

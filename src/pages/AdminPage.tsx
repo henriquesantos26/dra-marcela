@@ -68,7 +68,7 @@ const AdminPage = () => {
         setMobileOpen={setMobileOpen}
       />
 
-      <div className={`flex-1 transition-all duration-300 w-full ${collapsed ? 'md:ml-[72px]' : 'md:ml-[260px]'}`}>
+      <div className={`flex-1 transition-all duration-300 flex flex-col min-w-0 ${collapsed ? 'md:pl-[72px]' : 'md:pl-[260px]'}`}>
         <AdminHeader
           sectionLabel={PAGE_LABELS[activePage] || activePage}
           saving={saving}
@@ -80,7 +80,7 @@ const AdminPage = () => {
           onMenuClick={() => setMobileOpen(true)}
         />
 
-        <main className="p-4 md:p-8 max-w-6xl overflow-x-hidden">
+        <main className="p-4 md:p-8 w-full max-w-[1600px] mx-auto overflow-x-hidden">
           {activePage === 'dashboard' ? (
             <AdminDashboardPage />
           ) : activePage === 'metrics' ? (

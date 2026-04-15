@@ -60,6 +60,14 @@ const AdminBlogPage = () => {
 
   // Post filter
   const [postFilter, setPostFilter] = useState<'all' | 'drafts' | 'scheduled' | 'published' | 'trash'>('all');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [dateMode, setDateMode] = useState('all');
+
+  // Confirmation modal
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isPermanentDelete, setIsPermanentDelete] = useState(false);
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -79,15 +87,31 @@ const AdminBlogPage = () => {
   const filteredPosts = useMemo(() => {
     return posts.filter(p => {
       const isDeleted = !!(p as any).deleted_at;
+      
+      // Filter by state
+      let matchesState = false;
       switch (postFilter) {
-        case 'drafts': return !isDeleted && !p.published && !p.scheduled_at;
-        case 'scheduled': return !isDeleted && !p.published && !!p.scheduled_at;
-        case 'published': return !isDeleted && p.published;
-        case 'trash': return isDeleted;
-        default: return !isDeleted; // 'all' excludes trash
+        case 'drafts': matchesState = !isDeleted && !p.published && !p.scheduled_at; break;
+        case 'scheduled': matchesState = !isDeleted && !p.published && !!p.scheduled_at; break;
+        case 'published': matchesState = !isDeleted && p.published; break;
+        case 'trash': matchesState = isDeleted; break;
+        default: matchesState = !isDeleted; break;
       }
+      if (!matchesState) return false;
+
+      // Filter by category
+      if (categoryFilter && p.category !== categoryFilter) return false;
+
+      // Filter by date
+      if (startDate || endDate) {
+        const postDate = new Date(p.created_at).toISOString().split('T')[0];
+        if (startDate && postDate < startDate) return false;
+        if (endDate && postDate > endDate) return false;
+      }
+
+      return true;
     });
-  }, [posts, postFilter]);
+  }, [posts, postFilter, categoryFilter, startDate, endDate]);
 
   const postCounts = useMemo(() => ({
     all: posts.filter(p => !(p as any).deleted_at).length,
@@ -134,20 +158,82 @@ const AdminBlogPage = () => {
   };
 
   const handleMoveToTrash = async (id: string) => {
-    if (!confirm('Mover este post para a lixeira?')) return;
-    await supabase.from('blog_posts').update({ deleted_at: new Date().toISOString() } as any).eq('id', id);
-    fetchPosts();
+    // Optimistic update
+    setPosts(prev => prev.map(p => p.id === id ? { ...p, deleted_at: new Date().toISOString(), published: false } as any : p));
+    setDeletingId(null);
+    
+    const { error } = await supabase.from('blog_posts').update({ 
+      deleted_at: new Date().toISOString(),
+      published: false 
+    } as any).eq('id', id);
+    if (error) {
+      alert('Erro ao excluir post. Tente novamente.');
+      fetchPosts(); // Rollback/Sync
+    }
   };
 
   const handleRestore = async (id: string) => {
-    await supabase.from('blog_posts').update({ deleted_at: null } as any).eq('id', id);
-    fetchPosts();
+    // Optimistic update
+    setPosts(prev => prev.map(p => p.id === id ? { ...p, deleted_at: null } as any : p));
+    
+    const { error } = await supabase.from('blog_posts').update({ deleted_at: null } as any).eq('id', id);
+    if (error) {
+      alert('Erro ao restaurar post.');
+      fetchPosts();
+    }
+  };
+
+  const applyDatePreset = (preset: string) => {
+    setDateMode(preset);
+    const now = new Date();
+    let start = '';
+    let end = new Date().toISOString().split('T')[0];
+
+    if (preset.startsWith('month-')) {
+      const monthIdx = parseInt(preset.split('-')[1]);
+      const year = now.getFullYear();
+      start = new Date(year, monthIdx, 1).toISOString().split('T')[0];
+      end = new Date(year, monthIdx + 1, 0).toISOString().split('T')[0];
+    } else {
+      switch (preset) {
+        case 'today':
+          start = end;
+          break;
+        case 'last7':
+          const last7 = new Date();
+          last7.setDate(now.getDate() - 7);
+          start = last7.toISOString().split('T')[0];
+          break;
+        case 'thisMonth':
+          start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+          break;
+        case 'lastMonth':
+          const lmStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const lmEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+          start = lmStart.toISOString().split('T')[0];
+          end = lmEnd.toISOString().split('T')[0];
+          break;
+        case 'custom':
+          return; // Don't change dates, just show inputs
+        default:
+          start = '';
+          end = '';
+      }
+    }
+    setStartDate(start);
+    setEndDate(end);
   };
 
   const handlePermanentDelete = async (id: string) => {
-    if (!confirm('Excluir permanentemente? Esta ação não pode ser desfeita.')) return;
-    await supabase.from('blog_posts').delete().eq('id', id);
-    fetchPosts();
+    // Optimistic update
+    setPosts(prev => prev.filter(p => p.id !== id));
+    setDeletingId(null);
+    
+    const { error } = await supabase.from('blog_posts').delete().eq('id', id);
+    if (error) {
+      alert('Erro ao excluir permanentemente.');
+      fetchPosts();
+    }
   };
 
   const handleTogglePublish = async (post: BlogPost) => {
@@ -658,7 +744,7 @@ const AdminBlogPage = () => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="posts" className="w-full">
-        <TabsList className="bg-secondary border border-border rounded-xl p-1 w-full justify-start">
+        <TabsList className="bg-secondary/50 border border-border rounded-xl p-1 w-full justify-start flex-wrap h-auto">
           <TabsTrigger value="posts" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm font-bold text-sm">
             📝 Posts
           </TabsTrigger>
@@ -687,28 +773,94 @@ const AdminBlogPage = () => {
             </div>
 
             {/* Filter pills */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {([
-                { key: 'all' as const, label: 'Todos', count: postCounts.all },
-                { key: 'drafts' as const, label: 'Rascunhos', count: postCounts.drafts },
-                { key: 'scheduled' as const, label: 'Programados', count: postCounts.scheduled },
-                { key: 'published' as const, label: 'Postados', count: postCounts.published },
-                { key: 'trash' as const, label: '🗑️ Lixeira', count: postCounts.trash },
-              ]).map(f => (
-                <button
-                  key={f.key}
-                  onClick={() => setPostFilter(f.key)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    postFilter === f.key
-                      ? f.key === 'trash'
-                        ? 'bg-destructive/10 text-destructive border border-destructive/30'
-                        : 'bg-primary/10 text-primary border border-primary/30'
-                      : 'bg-secondary text-muted-foreground border border-border hover:text-foreground'
-                  }`}
+            <div className="flex items-center gap-3 flex-wrap bg-secondary/30 p-3 rounded-2xl border border-border/50">
+              <div className="flex items-center gap-2">
+                {([
+                  { key: 'all' as const, label: 'Todos', count: postCounts.all },
+                  { key: 'drafts' as const, label: 'Rascunhos', count: postCounts.drafts },
+                  { key: 'scheduled' as const, label: 'Programados', count: postCounts.scheduled },
+                  { key: 'published' as const, label: 'Postados', count: postCounts.published },
+                  { key: 'trash' as const, label: '🗑️ Lixeira', count: postCounts.trash },
+                ]).map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => setPostFilter(f.key)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                      postFilter === f.key
+                        ? f.key === 'trash'
+                          ? 'bg-destructive/10 text-destructive border border-destructive/30'
+                          : 'bg-primary/10 text-primary border border-primary/30'
+                        : 'bg-secondary text-muted-foreground border border-border hover:text-foreground'
+                    }`}
+                  >
+                    {f.label} <span className="ml-1 opacity-60">({f.count})</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="w-px h-6 bg-border mx-1 hidden sm:block" />
+
+              <div className="flex items-center gap-2 flex-grow sm:flex-grow-0">
+                <select 
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="bg-secondary border border-border text-foreground px-3 py-2 rounded-xl text-xs font-bold focus:outline-none focus:ring-1 focus:ring-primary/50"
                 >
-                  {f.label} <span className="ml-1 opacity-60">({f.count})</span>
-                </button>
-              ))}
+                  <option value="">Todas as Categorias</option>
+                  {categoriesList.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                </select>
+
+                <div className="flex items-center gap-2 bg-secondary rounded-xl border border-border px-3 py-1.5 focus-within:ring-1 focus-within:ring-primary/50 transition-all">
+                  <Calendar className="w-3.5 h-3.5 text-muted-foreground mr-1" />
+                  <select 
+                    value={dateMode}
+                    onChange={(e) => applyDatePreset(e.target.value)}
+                    className="bg-secondary text-foreground text-xs font-bold focus:outline-none border-none p-0 cursor-pointer"
+                  >
+                    <option value="all">Todo o período</option>
+                    <optgroup label="Atalhos">
+                      <option value="today">Hoje</option>
+                      <option value="last7">Últimos 7 dias</option>
+                      <option value="thisMonth">Este Mês</option>
+                      <option value="lastMonth">Mês Passado</option>
+                    </optgroup>
+                    <optgroup label={`Meses de ${new Date().getFullYear()}`}>
+                      {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].map((m, i) => (
+                        <option key={m} value={`month-${i}`} className="bg-secondary text-foreground">{m}</option>
+                      ))}
+                    </optgroup>
+                    <option value="custom">📅 Personalizado...</option>
+                  </select>
+
+                  {dateMode === 'custom' && (
+                    <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border animate-in fade-in slide-in-from-left-2 duration-200">
+                      <input 
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="bg-transparent text-foreground text-[10px] font-bold focus:outline-none w-24"
+                      />
+                      <span className="text-muted-foreground text-[10px]">-</span>
+                      <input 
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="bg-transparent text-foreground text-[10px] font-bold focus:outline-none w-24"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {(categoryFilter || startDate || endDate) && (
+                  <button 
+                    onClick={() => { setCategoryFilter(''); setStartDate(''); setEndDate(''); setDateMode('all'); }}
+                    className="p-2 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                    title="Limpar filtros"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
             {loading ? (
@@ -763,7 +915,7 @@ const AdminBlogPage = () => {
                           <button onClick={() => handleRestore(post.id)} className="p-2 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-500 transition-colors" title="Restaurar">
                             <RotateCcw className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handlePermanentDelete(post.id)} className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Excluir permanentemente">
+                          <button onClick={() => { setDeletingId(post.id); setIsPermanentDelete(true); }} className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Excluir permanentemente">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </>
@@ -775,7 +927,7 @@ const AdminBlogPage = () => {
                           <button onClick={() => { setEditing(post); setIsNew(false); }} className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
                             <Edit2 className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleMoveToTrash(post.id)} className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Mover para lixeira">
+                          <button onClick={() => { setDeletingId(post.id); setIsPermanentDelete(false); }} className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Mover para lixeira">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </>
@@ -783,6 +935,38 @@ const AdminBlogPage = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+            {/* Confirmation Modal */}
+            {deletingId && (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-fade-in">
+                <div className="bg-card w-full max-w-sm rounded-[32px] border border-border shadow-2xl p-8 space-y-6">
+                  <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto">
+                    <Trash2 className="w-8 h-8 text-destructive" />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h4 className="text-xl font-black text-foreground">Confirmar Exclusão</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {isPermanentDelete 
+                        ? 'Esta ação é permanente e não poderá ser desfeita. Deseja continuar?' 
+                        : 'O post será movido para a lixeira e poderá ser recuperado depois.'}
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setDeletingId(null)}
+                      className="flex-1 py-3 rounded-xl bg-secondary text-muted-foreground font-bold text-sm hover:bg-secondary/80 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      onClick={() => isPermanentDelete ? handlePermanentDelete(deletingId) : handleMoveToTrash(deletingId)}
+                      className="flex-1 py-3 rounded-xl bg-destructive text-white font-bold text-sm hover:bg-destructive/90 transition-colors shadow-lg shadow-destructive/20"
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

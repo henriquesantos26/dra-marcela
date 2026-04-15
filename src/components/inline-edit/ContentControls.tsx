@@ -170,7 +170,11 @@ const ContentControls = () => {
 
   const renderBranding = () => (
     <>
-      <Group title="Logo & Favicon" defaultOpen>
+      <Group title="Identidade do Site" defaultOpen>
+        <Field label="Nome do Site (Título)" value={draft.branding.siteName || ''} onChange={(v) => updateField('branding.siteName', v)} />
+        <Field label="Descrição SEO" value={draft.branding.description || ''} onChange={(v) => updateField('branding.description', v)} multiline />
+      </Group>
+      <Group title="Logo & Favicon">
         <ImageUploadField label="Logo" value={draft.branding.logoUrl} onChange={(v) => updateField('branding.logoUrl', v)} path="logos" />
         <ImageUploadField label="Favicon" value={draft.branding.faviconUrl || ''} onChange={(v) => updateField('branding.faviconUrl', v)} path="favicons" />
       </Group>

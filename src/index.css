@@ -57,6 +57,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     --background: 222 47% 2%;
     --foreground: 210 40% 98%;
 
@@ -234,6 +235,12 @@
 }
 
 /* Blank section element animations */
+/* Native Select Dark Mode Fix */
+.dark select option {
+  background-color: #1e293b;
+  color: #f8fafc;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -254,3 +261,30 @@
   from { opacity: 0; transform: scale(0.9); }
   to { opacity: 1; transform: scale(1); }
 }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0f9f4;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #78B48D;
+  border-radius: 5px;
+  border: 2px solid #f0f9f4;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5a8a6a;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #78B48D #f0f9f4;
+}
+

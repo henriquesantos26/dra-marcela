@@ -15,6 +15,7 @@ const signupSchema = loginSchema.extend({
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [canRegister, setCanRegister] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -24,6 +25,20 @@ const AuthPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const checkUsers = async () => {
+      const { data: exists, error } = await import('@/integrations/supabase/client').then(m => 
+        m.supabase.rpc('check_any_user_exists')
+      );
+      
+      if (!error && exists) {
+        setCanRegister(false);
+        setIsLogin(true);
+      }
+    };
+    checkUsers();
+  }, []);
 
   React.useEffect(() => {
     if (user) navigate('/admin');
@@ -47,6 +62,10 @@ const AuthPage = () => {
           }
         }
       } else {
+        if (!canRegister) {
+          setError('O cadastro de novos usuários está desativado.');
+          return;
+        }
         const parsed = signupSchema.parse({ email, password, fullName });
         const { error } = await signUp(parsed.email, parsed.password, parsed.fullName);
         if (error) {
@@ -110,16 +129,18 @@ const AuthPage = () => {
             >
               Entrar
             </button>
-            <button
-              onClick={() => { setIsLogin(false); setError(''); setSuccess(''); }}
-              className={`flex-1 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all ${
-                !isLogin
-                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                  : 'text-muted-foreground hover:text-primary-foreground'
-              }`}
-            >
-              Cadastrar
-            </button>
+            {canRegister && (
+              <button
+                onClick={() => { setIsLogin(false); setError(''); setSuccess(''); }}
+                className={`flex-1 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all ${
+                  !isLogin
+                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                    : 'text-muted-foreground hover:text-primary-foreground'
+                }`}
+              >
+                Cadastrar
+              </button>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">

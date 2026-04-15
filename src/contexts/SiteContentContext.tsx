@@ -87,6 +87,8 @@ export interface SiteContent {
     linkColor: string;
     badgeColor: string;
     blogCtaBackground: string;
+    siteName?: string;
+    description?: string;
   };
   marcela?: {
     hero: {
@@ -222,18 +224,59 @@ export const SiteContentProvider = ({ children }: { children: ReactNode }) => {
     loadSections();
   }, [locale]);
 
-  // Dynamic favicon
+  // Dynamic favicon, title and SEO
   useEffect(() => {
-    const faviconUrl = content.branding?.faviconUrl;
-    if (!faviconUrl) return;
-    let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
-    if (!link) {
-      link = document.createElement('link');
-      link.rel = 'icon';
-      document.head.appendChild(link);
+    const branding = content.branding;
+    if (!branding) return;
+
+    // 1. Favicon
+    const faviconUrl = branding.faviconUrl;
+    if (faviconUrl) {
+      // Remove any existing favicons to avoid conflicts
+      const existingIcons = document.querySelectorAll("link[rel*='icon']");
+      existingIcons.forEach(el => el.remove());
+
+      const link = document.createElement('link');
+      link.type = 'image/x-icon';
+      link.rel = 'shortcut icon';
+      link.href = faviconUrl;
+      document.getElementsByTagName('head')[0].appendChild(link);
     }
-    link.href = faviconUrl;
-  }, [content.branding?.faviconUrl]);
+
+    // 2. Title
+    if (branding.siteName) {
+      document.title = branding.siteName;
+    }
+
+    // 3. Description (SEO)
+    if (branding.description) {
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (!metaDesc) {
+        metaDesc = document.createElement('meta');
+        metaDesc.setAttribute('name', 'description');
+        document.head.appendChild(metaDesc);
+      }
+      metaDesc.setAttribute('content', branding.description);
+
+      // OG Description
+      let ogDesc = document.querySelector('meta[property="og:description"]');
+      if (ogDesc) ogDesc.setAttribute('content', branding.description);
+    }
+
+    // 4. OG Title
+    if (branding.siteName) {
+      let ogTitle = document.querySelector('meta[property="og:title"]');
+      if (ogTitle) ogTitle.setAttribute('content', branding.siteName);
+    }
+
+    // 5. OG Image (uses logo if available, or predefined)
+    if (branding.logoUrl) {
+      let ogImage = document.querySelector('meta[property="og:image"]');
+      if (ogImage) ogImage.setAttribute('content', branding.logoUrl);
+      let twitterImage = document.querySelector('meta[name="twitter:image"]');
+      if (twitterImage) twitterImage.setAttribute('content', branding.logoUrl);
+    }
+  }, [content.branding?.faviconUrl, content.branding?.siteName, content.branding?.description, content.branding?.logoUrl]);
 
   const updateContent = async (newContent: SiteContent) => {
     setSaving(true);

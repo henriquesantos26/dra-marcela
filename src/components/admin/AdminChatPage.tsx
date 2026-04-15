@@ -38,6 +38,7 @@ const ConversationsTab = () => {
   const [clientPanelOpen, setClientPanelOpen] = useState(false);
   const [clientData, setClientData] = useState({ name: '', email: '', phone: '', notes: '' });
   const [savingClient, setSavingClient] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const bottomRef = React.useRef<HTMLDivElement>(null);
 
   const fetchConversations = async () => {
@@ -146,12 +147,18 @@ const ConversationsTab = () => {
     if (selected?.id === id) setSelected(null);
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm('Excluir esta conversa?')) return;
-    await supabase.from('chat_conversations').delete().eq('id', id);
-    fetchConversations();
+  const handleDelete = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    // Optimistic update
+    setConversations(prev => prev.filter(c => c.id !== id));
+    setDeletingId(null);
     if (selected?.id === id) setSelected(null);
+    
+    const { error } = await supabase.from('chat_conversations').delete().eq('id', id);
+    if (error) {
+      alert('Erro ao excluir conversa.');
+      fetchConversations();
+    }
   };
 
   const handleSaveClient = async () => {
@@ -252,7 +259,7 @@ const ConversationsTab = () => {
                       <button onClick={(e) => handleCloseConversation(conv.id, e)} className="p-1 rounded hover:bg-secondary text-muted-foreground/50 hover:text-muted-foreground" title="Fechar">
                         <XCircle className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={(e) => handleDelete(conv.id, e)} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive" title="Excluir">
+                      <button onClick={(e) => { e.stopPropagation(); setDeletingId(conv.id); }} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive" title="Excluir">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -500,6 +507,36 @@ const ConversationsTab = () => {
               <Save className="w-4 h-4" />
               {savingClient ? 'Salvando...' : 'Salvar dados'}
             </button>
+          </div>
+        </div>
+      )}
+      {/* Confirmation Modal */}
+      {deletingId && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-card w-full max-w-sm rounded-[32px] border border-border shadow-2xl p-8 space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto">
+              <Trash2 className="w-8 h-8 text-destructive" />
+            </div>
+            <div className="text-center space-y-2">
+              <h4 className="text-xl font-black text-foreground">Excluir Conversa</h4>
+              <p className="text-sm text-muted-foreground">
+                Deseja realmente excluir esta conversa? Todas as mensagens e dados vinculados serão removidos permanentemente.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setDeletingId(null)}
+                className="flex-1 py-3 rounded-xl bg-secondary text-muted-foreground font-bold text-sm hover:bg-secondary/80 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={() => handleDelete(deletingId)}
+                className="flex-1 py-3 rounded-xl bg-destructive text-white font-bold text-sm hover:bg-destructive/90 transition-colors shadow-lg shadow-destructive/20"
+              >
+                Excluir
+              </button>
+            </div>
           </div>
         </div>
       )}

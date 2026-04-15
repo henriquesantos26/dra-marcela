@@ -172,22 +172,26 @@ export default function Home() {
   const { sections, sectionsLoading } = useSiteContent();
 
   return (
-    <div className="min-h-screen bg-white font-marcela-theme marcela-theme selection:bg-[#78B48D]/30">
-      <Header />
+    <InlineEditProvider>
+      <div className="min-h-screen bg-white font-marcela-theme marcela-theme selection:bg-[#78B48D]/30">
+        <EditModeBar />
+        <FloatingEditButton />
+        <EditorSidebar />
+        <Header />
 
       {/* Hero Section */}
       <EditableSection sectionId="marcela.hero">
         <section className="bg-[#A6D9B9] relative overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 md:px-12 flex flex-col md:flex-row items-center relative z-10 min-h-[600px] lg:min-h-[650px]">
+          <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col md:flex-row items-center relative z-10 min-h-[550px] md:min-h-[600px] lg:min-h-[650px]">
             
             {/* Text Content */}
             <motion.div 
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
-              className="w-full md:w-3/5 pt-16 pb-20 md:py-24 z-20"
+              className="w-full md:w-3/4 lg:w-3/5 pt-16 pb-20 md:py-24 z-20"
             >
-              <h1 className="text-4xl md:text-5xl lg:text-[64px] font-medium mb-6 leading-tight bg-gradient-to-r from-[#2C3E35] via-[#4A7559] to-[#2C3E35] bg-[length:200%_auto] animate-marcela-gradient bg-clip-text text-transparent">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[64px] font-medium mb-6 leading-tight bg-gradient-to-r from-[#2C3E35] via-[#4A7559] to-[#2C3E35] bg-[length:200%_auto] animate-marcela-gradient bg-clip-text text-transparent">
                 <EditableText fieldPath="marcela.hero.title">{marcela.hero?.title || 'Dra. Marcela Bernardi'}</EditableText>
               </h1>
               
@@ -235,7 +239,7 @@ export default function Home() {
       {/* Sobre Section */}
       <EditableSection sectionId="marcela.about">
         <section id="sobre" className="py-20 md:py-32 bg-white relative overflow-hidden">
-          <div className="max-w-6xl mx-auto px-4 md:px-12">
+          <div className="max-w-6xl mx-auto px-6 md:px-12">
             {/* Header */}
             <motion.div 
               initial={{ opacity: 0, y: 30 }}
@@ -323,7 +327,7 @@ export default function Home() {
       {/* Serviços Section */}
       <EditableSection sectionId="marcela.services">
         <section id="especialidades" ref={servicosRef} className="py-20 md:py-32 bg-[#B5D8C3] relative">
-          <div className="max-w-7xl mx-auto px-4 md:px-12 flex flex-col lg:flex-row items-center lg:items-start gap-16 relative z-10">
+          <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col lg:flex-row items-center lg:items-start gap-16 relative z-10">
             
             {/* Text Content */}
             <div ref={colunaFixaRef} className="w-full lg:w-1/3">
@@ -350,7 +354,7 @@ export default function Home() {
             </div>
             
             {/* Bento Grid */}
-            <div ref={colunaRolagemRef} className="w-full lg:w-2/3 grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+            <div ref={colunaRolagemRef} className="w-full lg:w-2/3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
               {servicos.map((servico, index) => {
                 const Icon = servico.icon;
                 const isLarge = index === 0 || index === 3;
@@ -381,7 +385,7 @@ export default function Home() {
       {/* Depoimentos Section */}
       <EditableSection sectionId="marcela.testimonials">
         <section id="depoimentos" className="py-20 md:py-32 bg-white overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 md:px-12">
+          <div className="max-w-7xl mx-auto px-6 md:px-12">
             {/* Header */}
             <motion.div 
               initial={{ opacity: 0, y: 30 }}
@@ -409,7 +413,7 @@ export default function Home() {
                   {depoimentos.map((depoimento, index) => (
                     <div 
                       key={index} 
-                      className="bg-white p-10 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col items-center text-center border border-gray-100 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] transition-shadow duration-500 cursor-pointer min-w-full md:min-w-[calc(33.333%-1.333rem)]"
+                      className="bg-white p-6 md:p-10 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col items-center text-center border border-gray-100 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] transition-shadow duration-500 cursor-pointer min-w-full md:min-w-[calc(50%-2rem)] lg:min-w-[calc(33.333%-1.333rem)]"
                     >
                       <div className="flex gap-1 mb-6">
                         {[...Array(5)].map((_, i) => (
@@ -465,13 +469,13 @@ export default function Home() {
       {/* Estatísticas Section */}
       <EditableSection sectionId="marcela.stats">
         <section className="py-20 bg-[#82B596] relative overflow-hidden">
-          <div className="max-w-6xl mx-auto px-4 md:px-12 relative z-10">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 relative z-10">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
-              className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl py-16 px-8 flex flex-col md:flex-row justify-around items-center gap-12 md:gap-4 text-white text-center shadow-[0_8px_32px_rgba(0,0,0,0.1)]"
+              className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl py-12 md:py-16 px-6 md:px-8 flex flex-col md:flex-row justify-around items-center gap-12 md:gap-4 text-white text-center shadow-[0_8px_32px_rgba(0,0,0,0.1)]"
             >
               <div className="flex flex-col items-center">
                 <span className="text-6xl md:text-7xl font-medium mb-2 drop-shadow-sm"><Counter from={0} to={marcela.stats?.item1.value || 9} duration={2} /></span>
@@ -499,7 +503,7 @@ export default function Home() {
       {/* Consultório Section */}
       <EditableSection sectionId="marcela.contact">
         <section id="contato" className="py-20 md:py-32 bg-[#B5D8C3] relative">
-          <div className="max-w-7xl mx-auto px-4 md:px-12">
+          <div className="max-w-7xl mx-auto px-6 md:px-12">
             <div className="bg-white rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-[0_20px_60px_rgba(0,0,0,0.05)] border border-white/50">
               
               {/* Left Column - Info & Map */}
@@ -599,7 +603,7 @@ export default function Home() {
           </svg>
         </div>
 
-        <div className="py-20 md:py-24 max-w-7xl mx-auto px-4 md:px-12">
+        <div className="py-20 md:py-24 max-w-7xl mx-auto px-6 md:px-12">
           {/* Header */}
           <motion.div 
             initial={{ opacity: 0, y: 30 }}
@@ -618,7 +622,7 @@ export default function Home() {
           
           {/* Blog Cards */}
           {posts && posts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
               {posts.slice(0, 3).map((post, index) => (
                 <Link to={`/blog/${post.slug}`} key={index}>
                   <motion.div 
@@ -680,5 +684,6 @@ export default function Home() {
         )}
       </div>
     </div>
+  </InlineEditProvider>
   );
 }

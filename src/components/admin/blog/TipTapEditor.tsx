@@ -5,7 +5,8 @@ import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import TextStyle from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
-import { Bold, Italic, Strikethrough, Link as LinkIcon, Image as ImageIcon, List, ListOrdered, Quote, Undo, Redo } from 'lucide-react';
+import { Bold, Italic, Strikethrough, Link as LinkIcon, Image as ImageIcon, List, ListOrdered, Quote, Undo, Redo, Loader2, Upload } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TipTapEditorProps {
   content: string;
@@ -13,6 +14,9 @@ interface TipTapEditorProps {
 }
 
 const TipTapEditor: React.FC<TipTapEditorProps> = ({ content, onChange }) => {
+  const [uploading, setUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -48,10 +52,46 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({ content, onChange }) => {
     }
   }, [content, editor]);
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !editor) return;
+
+    try {
+      setUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `editor/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('blog-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('blog-images')
+        .getPublicUrl(filePath);
+
+      editor.chain().focus().setImage({ src: publicUrl }).run();
+    } catch (error) {
+      console.error('Erro no upload:', error);
+      alert('Erro ao carregar imagem. Tente novamente.');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const addImage = useCallback(() => {
-    const url = window.prompt('URL ou endereço da imagem:');
-    if (url && editor) {
-      editor.chain().focus().setImage({ src: url }).run();
+    const choice = window.confirm('Deseja fazer upload de uma imagem? (Cancelar para inserir via URL)');
+    
+    if (choice) {
+      fileInputRef.current?.click();
+    } else {
+      const url = window.prompt('URL ou endereço da imagem:');
+      if (url && editor) {
+        editor.chain().focus().setImage({ src: url }).run();
+      }
     }
   }, [editor]);
 
@@ -93,7 +133,23 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({ content, onChange }) => {
         <div className="w-px h-5 bg-border mx-1" />
         
         <button type="button" onClick={setLink} className={`p-2 rounded-lg transition-colors ${editor.isActive('link') ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:bg-secondary'}`} title="Inserir Link"><LinkIcon className="w-4 h-4" /></button>
-        <button type="button" onClick={addImage} className="p-2 rounded-lg transition-colors text-muted-foreground hover:bg-secondary" title="Inserir Imagem Inline"><ImageIcon className="w-4 h-4" /></button>
+        <button 
+          type="button" 
+          onClick={addImage} 
+          disabled={uploading}
+          className={`p-2 rounded-lg transition-colors text-muted-foreground hover:bg-secondary flex items-center gap-1 ${uploading ? 'animate-pulse' : ''}`} 
+          title="Inserir Imagem (Upload ou URL)"
+        >
+          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
+        </button>
+        
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+          accept="image/*"
+          className="hidden"
+        />
         
         <div className="flex-grow" />
         
